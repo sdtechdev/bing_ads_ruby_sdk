@@ -4,6 +4,7 @@ module BingAdsRubySdk
   module OAuth2
     # Oauth2 token default non-encrypted File System store
     class FsStore
+      S3_PATH = '2/bing_audience_credentials/auth_token.json'
       # @param filename [String] the uniq filename to identify filename storing data.
       def initialize(filename)
         @filename = filename
@@ -14,7 +15,11 @@ module BingAdsRubySdk
       # @return [self] if the filename don't exist.
       def write(value)
         return nil unless filename
-        File.open(filename, "w") { |f| JSON.dump(value, f) }
+        file = File.open(filename, "w") { |f| JSON.dump(value, f) }
+        S3Helper.new.upload_content(
+          S3_PATH,
+          file
+        )
         self
       end
 
@@ -22,8 +27,8 @@ module BingAdsRubySdk
       # @return [Hash] if the token information that was stored.
       # @return [nil] if the file doesn't exist.
       def read
-        return nil unless File.file?("./#{filename}")
-        JSON.parse(IO.read(filename))
+        s3_file = S3Helper.new.download(S3_PATH)
+        JSON.parse(s3_file.body.read)
       end
 
       private
